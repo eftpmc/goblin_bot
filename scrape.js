@@ -2,6 +2,7 @@ const fs = require('fs');
 
 require('dotenv').config(); // Add this line at the top of your file
 
+const cron = require('node-cron');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const axios = require('axios');
@@ -25,6 +26,18 @@ const sendTelegramMessage = async (message) => {
     console.error(`Failed to send Telegram message: ${error}`);
   }
 };
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('Unhandled Rejection:', reason);
+  sendTelegramMessage(`Unhandled Rejection: ${reason.toString()}`);
+});
+
+process.on('uncaughtException', (error) => {
+  console.log('Uncaught Exception:', error);
+  sendTelegramMessage(`Uncaught Exception: ${error.toString()}`);
+});
+
+let task;
 
 const scrape = async () => {
   try {
@@ -51,7 +64,11 @@ const scrape = async () => {
     if (affordableProducts.length > 0) {
       const affordableProductNames = affordableProducts.map(product => `${product.name} ($${product.price})`).join(', ');
       await sendTelegramMessage(`Affordable products found: ${affordableProductNames}`);
-      clearInterval(scrapeInterval);
+      
+      if (task) {  // Check if task is set
+        task.stop();  // Stop the cron job
+      }
+
       console.log('Program stopped as affordable products were found.');
     } else {
       console.log('No affordable products, no message sent');
@@ -65,5 +82,7 @@ const scrape = async () => {
 // Run the scrape function initially
 scrape();
 
-// Then run it every 15 seconds
-const scrapeInterval = setInterval(scrape, 15000);
+// Schedule tasks to be run on the server.
+task = cron.schedule('*/15 * * * * *', function() {
+  scrape();
+});
