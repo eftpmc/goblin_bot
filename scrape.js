@@ -1,14 +1,18 @@
+const fs = require('fs');
+
+require('dotenv').config(); // Add this line at the top of your file
+
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const axios = require('axios');
 
 puppeteer.use(StealthPlugin());
 
-const MAX_AFFORDABLE_PRICE = 3; // Change this as needed
+const MAX_AFFORDABLE_PRICE = 3;
 
-// Replace with your Telegram bot token and chat ID
-const TELEGRAM_BOT_TOKEN = '6681052397:AAHlGRB8u-mD27yrwUD8Tp1lE7G7ygnTSJA';
-const TELEGRAM_CHAT_ID = '6461045776';
+// Read from .env file
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 const sendTelegramMessage = async (message) => {
   try {
