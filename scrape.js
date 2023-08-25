@@ -1,48 +1,42 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const fs = require('fs');
-const twilio = require('twilio');
+const axios = require('axios');
 
 puppeteer.use(StealthPlugin());
 
-const MAX_AFFORDABLE_PRICE = 3; // You can change this value as needed
+const MAX_AFFORDABLE_PRICE = 3; // Change this as needed
 
-const accountSid = 'ACf1ec299735f3dbde4f51067a325475fa';
-const authToken = '0727095d995c8a0934e7733db32c4d61';
-const client = new twilio(accountSid, authToken);
+// Replace with your Telegram bot token and chat ID
+const TELEGRAM_BOT_TOKEN = '6681052397:AAHlGRB8u-mD27yrwUD8Tp1lE7G7ygnTSJA';
+const TELEGRAM_CHAT_ID = '6461045776';
 
-const sendSMS = (message) => {
-  client.messages
-    .create({
-      body: message,
-      from: '+18666950852',
-      to: '+18438164991',
-    })
-    .then((message) => console.log(`Message sent: ${message.sid}`))
-    .catch((error) => console.error(`Failed to send SMS: ${error}`));
+const sendTelegramMessage = async (message) => {
+  try {
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      chat_id: TELEGRAM_CHAT_ID,
+      text: message
+    });
+    console.log('Message sent via Telegram');
+  } catch (error) {
+    console.error(`Failed to send Telegram message: ${error}`);
+  }
 };
 
 const scrape = async () => {
   try {
-    const browser = await puppeteer.launch({
-      headless: "new",
-    });
-
+    const browser = await puppeteer.launch({ headless: "new" });
     const page = await browser.newPage();
     await page.goto('https://goblin420.com/', { waitUntil: 'domcontentloaded' });
 
     const products = await page.evaluate(() => {
       const productElements = document.querySelectorAll('.product-tile');
       const productData = [];
-
       productElements.forEach((productElement) => {
         const productName = productElement.querySelector('.tile__heading').innerText;
         const productPriceText = productElement.querySelector('.tile__price').innerText;
         const productPrice = parseFloat(productPriceText.replace(/[^0-9.]/g, ''));
-
         productData.push({ name: productName, price: productPrice });
       });
-
       return productData;
     });
 
@@ -52,8 +46,8 @@ const scrape = async () => {
 
     if (affordableProducts.length > 0) {
       const affordableProductNames = affordableProducts.map(product => `${product.name} ($${product.price})`).join(', ');
-      sendSMS(`Affordable products found: ${affordableProductNames}`);
-      clearInterval(scrapeInterval); // Stop the interval
+      await sendTelegramMessage(`Affordable products found: ${affordableProductNames}`);
+      clearInterval(scrapeInterval);
       console.log('Program stopped as affordable products were found.');
     } else {
       console.log('No affordable products, no message sent');
